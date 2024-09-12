@@ -3,7 +3,7 @@ import java.io.*;
 
 //no binning
 //no data imputation
-//chunks for 10-fold cross validation are NOT shuffled in this class
+//chunks for 10-fold cross validation ARE shuffled in this class
 public class NoiseTestVoteDriver {
     // Function to shuffle values within a feature column
     public static void shuffleFeature(Object[][] data, int featureIndex) {
@@ -52,7 +52,7 @@ public class NoiseTestVoteDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        //Collections.shuffle(dataset);
+        Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;

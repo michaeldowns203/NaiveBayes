@@ -3,7 +3,7 @@ import java.io.*;
 
 //no binning
 //data imputation - we replaced each instance of "?" with a random value 1-10
-//chunks for 10-fold cross validation are NOT shuffled in this class
+//chunks for 10-fold cross validation are NOT shuffled in this class (but they were shuffled to get our experimental data)
 public class NoiseTestBreastDriver {
     // Function to shuffle values within a feature column
     public static void shuffleFeature(Object[][] data, int featureIndex) {
@@ -15,7 +15,7 @@ public class NoiseTestBreastDriver {
         }
 
         // Shuffle the extracted feature values
-        Collections.shuffle(featureValues);
+        //Collections.shuffle(featureValues);
 
         // Put the shuffled values back into the dataset
         for (int i = 0; i < data.length; i++) {
@@ -51,7 +51,7 @@ public class NoiseTestBreastDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        //Collections.shuffle(dataset);
+        Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;

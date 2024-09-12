@@ -3,7 +3,7 @@ import java.io.*;
 
 //no binning
 //no data imputation
-//chunks for 10-fold cross validation are NOT shuffled in this class
+//chunks for 10-fold cross validation ARE shuffled in this class
 public class TestVotesDriver {
 
     // Split the dataset into 10 chunks
@@ -17,7 +17,7 @@ public class TestVotesDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        //Collections.shuffle(dataset);
+        Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;

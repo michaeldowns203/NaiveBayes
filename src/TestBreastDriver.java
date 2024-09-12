@@ -3,7 +3,7 @@ import java.io.*;
 
 //no binning
 //data imputation - we replaced each instance of "?" with a random value 1-10
-//chunks for 10-fold cross validation are NOT shuffled in this class
+//chunks for 10-fold cross validation are NOT shuffled in this class (but they were shuffled to get our experimental data)
 public class TestBreastDriver {
 
     // Split the dataset into 10 chunks
