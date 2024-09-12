@@ -72,6 +72,46 @@ public class NaiveBayesClassifier {
         return classScores.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
     }
 
+    // Method to print the trained model
+    public void printModel() {
+        System.out.println("Prior Probabilities:");
+        for (Object label : priorProbabilities.keySet()) {
+            System.out.println("Class " + label + ": " + priorProbabilities.get(label));
+        }
+
+        System.out.println("\nClass-Conditional Attribute Probabilities:");
+        for (Object label : likelihoods.keySet()) {
+            System.out.println("Class " + label + ":");
+            for (int attribute : likelihoods.get(label).keySet()) {
+                System.out.println("  Attribute " + attribute + ":");
+                for (Object value : likelihoods.get(label).get(attribute).keySet()) {
+                    System.out.println("    Value " + value + ": " + likelihoods.get(label).get(attribute).get(value));
+                }
+            }
+        }
+    }
+
+    // Print the counts for each class and class-conditional attribute values
+    public void printCounts() {
+        // Print class counts
+        System.out.println("Class Counts:");
+        for (Object label : classCounts.keySet()) {
+            System.out.println("Class " + label + ": " + classCounts.get(label) + " instances");
+        }
+
+        // Print class-conditional attribute counts
+        System.out.println("\nClass-Conditional Attribute Counts:");
+        for (Object label : featureCounts.keySet()) {
+            System.out.println("Class " + label + ":");
+            for (int attribute : featureCounts.get(label).keySet()) {
+                System.out.println("  Attribute " + attribute + ":");
+                for (Object value : featureCounts.get(label).get(attribute).keySet()) {
+                    int count = featureCounts.get(label).get(attribute).get(value);
+                    System.out.println("    Value " + value + ": " + count + " instances");
+                }
+            }
+        }
+    }
 
 }
 

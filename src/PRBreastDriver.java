@@ -1,42 +1,8 @@
 import java.util.*;
 import java.io.*;
 
-public class NoiseTestBreastDriver {
-    // Function to shuffle values within a feature column
-    public static void shuffleFeature(Object[][] data, int featureIndex) {
-        List<Object> featureValues = new ArrayList<>();
+public class PRBreastDriver {
 
-        // Extract all values from the feature column
-        for (Object[] row : data) {
-            featureValues.add(row[featureIndex]);
-        }
-
-        // Shuffle the extracted feature values
-        Collections.shuffle(featureValues);
-
-        // Put the shuffled values back into the dataset
-        for (int i = 0; i < data.length; i++) {
-            data[i][featureIndex] = featureValues.get(i);
-        }
-    }
-
-    // Introduce noise into 10% of the features by shuffling them
-    public static void introduceNoise(Object[][] data, int numFeatures) {
-        Random rand = new Random();
-        Set<Integer> selectedFeatures = new HashSet<>();
-        int numNoisyFeatures = (int) Math.ceil(numFeatures * 0.1);  // 10% of features
-
-        // Randomly select 10% of the features
-        while (selectedFeatures.size() < numNoisyFeatures) {
-            int featureIndex = rand.nextInt(numFeatures);
-            selectedFeatures.add(featureIndex);
-        }
-
-        // Shuffle values within the selected features
-        for (int featureIndex : selectedFeatures) {
-            shuffleFeature(data, featureIndex);
-        }
-    }
     public static void printTestData(Object[][] testData) {
         System.out.println("Test Data:");
         for (Object[] row : testData) {
@@ -58,7 +24,7 @@ public class NoiseTestBreastDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        //Collections.shuffle(dataset);
+        Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;
@@ -76,6 +42,7 @@ public class NoiseTestBreastDriver {
     }
 
     public static void main(String[] args) throws IOException {
+        // Assume data and labels are loaded as in your previous driver code
         String inputFile1 = "src/breast-cancer-wisconsin.data";
         try {
             FileInputStream fis = new FileInputStream(inputFile1);
@@ -119,7 +86,7 @@ public class NoiseTestBreastDriver {
 
                 lineNum++;
             }
-            introduceNoise(data, 9);
+
             // print the data to verify
             for (int i = 0; i < lineCount; i++) {
                 System.out.print("Label: " + labels[i] + " Data: ");
@@ -134,12 +101,9 @@ public class NoiseTestBreastDriver {
             // Split into 10 chunks
             List<Object[][]> chunks = splitIntoChunks(data, labels, 10);
 
-            // Loss instance variables
-            double totalAccuracy = 0;
             double totalPrecision = 0;
             double totalRecall = 0;
             double totalF1 = 0;
-            double total01loss = 0;
 
             // Perform 10-fold cross-validation
             for (int i = 0; i < 10; i++) {
@@ -173,13 +137,8 @@ public class NoiseTestBreastDriver {
                 // Train the classifier
                 NaiveBayesClassifier classifier = new NaiveBayesClassifier(9);  // Assuming 9 attributes
                 classifier.train(trainingArray, trainingLabelsArray);
-                if (i == 9) {
-                    classifier.printModel();  // Print the learned parameters
-                    classifier.printCounts(); // Print class and attribute counts
-                }
 
                 // Test the classifier
-                int correctPredictions = 0;
                 int truePositives = 0;
                 int falsePositives = 0;
                 int falseNegatives = 0;
@@ -190,18 +149,6 @@ public class NoiseTestBreastDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                    if (i == 9) {
-                        // Print the test data, predicted label, and actual label
-                        System.out.print("Test Data: [ ");
-                        for (Object feature : testInstance) {
-                            System.out.print(feature + " ");
-                        }
-                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
-                    }
-
-                    if (predicted.equals(testLabels[j])) {
-                        correctPredictions++;
-                    }
                     // Check if the predicted class is 4 (positive class)
                     if (predicted.equals(4)) {
                         if (actual.equals(4)) {
@@ -216,41 +163,26 @@ public class NoiseTestBreastDriver {
                 // Calculate precision and recall for class 4
                 double precision = truePositives / (double) (truePositives + falsePositives);
                 double recall = truePositives / (double) (truePositives + falseNegatives);
+
+                // Print precision and recall for class 4
+                System.out.println("Precision for class 4: " + precision);
+                System.out.println("Recall for class 4: " + recall);
+                System.out.println("Number of test instances: " + testData.length);
                 totalPrecision += precision;
                 totalRecall += recall;
 
                 double f1Score = 2 * (precision * recall) / (precision + recall);
+                System.out.println("F1 Score for class 4: " + f1Score);
                 totalF1 += f1Score;
-                // Calculate accuracy for this fold
-                double accuracy = (double) correctPredictions / testData.length;
-                totalAccuracy += accuracy;
-                // Calculate 0/1 loss
-                double loss01 = 1.0 - (double) correctPredictions / testData.length;
-                total01loss += loss01;
-
-                if (i == 9) {
-                    // Print loss info
-                    System.out.println("Number of correct predictions: " + correctPredictions);
-                    System.out.println("Number of test instances: " + testData.length);
-                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                    System.out.println("Precision for class 4 (fold " + (i + 1) + "): " + precision);
-                    System.out.println("Recall for class 4 (fold " + (i + 1) + "): " + recall);
-                    System.out.println("F1 Score for class 4 (fold " + (i + 1) + "): " + f1Score);
-                }
             }
 
             // Average accuracy across all 10 folds
-            double averageAccuracy = totalAccuracy / 10;
-            double average01loss = total01loss / 10;
             double averagePrecision = totalPrecision / 10;
             double averageRecall = totalRecall / 10;
             double averageF1 = totalF1 / 10;
-            //System.out.println("Average Accuracy: " + averageAccuracy);
-            //System.out.println("Average 0/1 Loss: " + average01loss);
-            //System.out.println("Average Precision: " + averagePrecision);
-            //System.out.println("Average Recall: " + averageRecall);
-            //System.out.println("Average F1: " + averageF1);
+            System.out.println("Average Precision: " + averagePrecision);
+            System.out.println("Average Recall: " + averageRecall);
+            System.out.println("Average F1: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
