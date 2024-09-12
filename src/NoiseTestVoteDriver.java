@@ -1,6 +1,9 @@
 import java.util.*;
 import java.io.*;
 
+//no binning
+//no data imputation
+//chunks for 10-fold cross validation are NOT shuffled in this class
 public class NoiseTestVoteDriver {
     // Function to shuffle values within a feature column
     public static void shuffleFeature(Object[][] data, int featureIndex) {
@@ -12,7 +15,7 @@ public class NoiseTestVoteDriver {
         }
 
         // Shuffle the extracted feature values
-        Collections.shuffle(featureValues);
+        //Collections.shuffle(featureValues);
 
         // Put the shuffled values back into the dataset
         for (int i = 0; i < data.length; i++) {
@@ -37,16 +40,6 @@ public class NoiseTestVoteDriver {
             shuffleFeature(data, featureIndex);
         }
     }
-    public static void printTestData(Object[][] testData) {
-        System.out.println("Test Data:");
-        for (Object[] row : testData) {
-            System.out.print("[ ");
-            for (Object value : row) {
-                System.out.print(value + " ");
-            }
-            System.out.println("]");
-        }
-    }
 
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
@@ -59,7 +52,7 @@ public class NoiseTestVoteDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        Collections.shuffle(dataset);
+        //Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;
@@ -97,7 +90,7 @@ public class NoiseTestVoteDriver {
 
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][16]; // Assuming 4 attributes (from column 1 to 4)
+            Object[][] data = new Object[lineCount][16];
 
             String line;
             int lineNum = 0;
@@ -109,9 +102,9 @@ public class NoiseTestVoteDriver {
                 // Assign the label (first column)
                 labels[lineNum] = rawData[0];
 
-                // Fill the data array (columns 2 to 10)
+
                 for (int i = 1; i < rawData.length; i++) {
-                    data[lineNum][i-1] = rawData[i]; //arrayindexoutofbounds error here - need to fix
+                    data[lineNum][i-1] = rawData[i];
                 }
 
                 lineNum++;
@@ -132,7 +125,12 @@ public class NoiseTestVoteDriver {
             // Split into 10 chunks
             List<Object[][]> chunks = splitIntoChunks(data, labels, 10);
 
+            // Loss instance variables
             double totalAccuracy = 0;
+            double totalPrecision = 0;
+            double totalRecall = 0;
+            double totalF1 = 0;
+            double total01loss = 0;
 
             // Perform 10-fold cross-validation
             for (int i = 0; i < 10; i++) {
@@ -164,34 +162,80 @@ public class NoiseTestVoteDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(16);  // Assuming 9 attributes
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(16);
                 classifier.train(trainingArray, trainingLabelsArray);
 
                 // Test the classifier
                 int correctPredictions = 0;
+                int truePositives = 0;
+                int falsePositives = 0;
+                int falseNegatives = 0;
                 for (int j = 0; j < testData.length; j++) {
                     Object[] testInstance = new Object[testData[j].length - 1];
                     System.arraycopy(testData[j], 0, testInstance, 0, testData[j].length - 1);
 
                     Object predicted = classifier.classify(testInstance);
+                    Object actual = testLabels[j];
+
+                    // Print the test data, predicted label, and actual label
+                    System.out.print("Test Data: [ ");
+                    for (Object feature : testInstance) {
+                        System.out.print(feature + " ");
+                    }
+                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+
+
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
+                    // Get true positives, false positives, and false negatives
+                    if (predicted.equals("republican")) {
+                        if (actual.equals("republican")) {
+                            truePositives++;
+                        } else {
+                            falsePositives++;
+                        }
+                    } else if (actual.equals("republican")) {
+                        falseNegatives++;
+                    }
                 }
+                // Calculate precision and recall
+                double precision = truePositives / (double) (truePositives + falsePositives);
+                double recall = truePositives / (double) (truePositives + falseNegatives);
+                totalPrecision += precision;
+                totalRecall += recall;
 
+                double f1Score = 2 * (precision * recall) / (precision + recall);
+                totalF1 += f1Score;
                 // Calculate accuracy for this fold
                 double accuracy = (double) correctPredictions / testData.length;
                 totalAccuracy += accuracy;
-                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                // Calculate 0/1 loss
+                double loss01 = 1.0 - (double) correctPredictions / testData.length;
+                total01loss += loss01;
+
+                // Print loss info
                 System.out.println("Number of correct predictions: " + correctPredictions);
                 System.out.println("Number of test instances: " + testData.length);
-                // Print test data
-                printTestData(testData);
+                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                System.out.println("Precision for class republican (fold " + (i + 1) + "): " + precision);
+                System.out.println("Recall for class republican (fold " + (i + 1) + "): " + recall);
+                System.out.println("F1 Score for class republican (fold " + (i + 1) + "): " + f1Score);
+
             }
 
             // Average accuracy across all 10 folds
             double averageAccuracy = totalAccuracy / 10;
+            double average01loss = total01loss / 10;
+            double averagePrecision = totalPrecision / 10;
+            double averageRecall = totalRecall / 10;
+            double averageF1 = totalF1 / 10;
             System.out.println("Average Accuracy: " + averageAccuracy);
+            System.out.println("Average 0/1 Loss: " + average01loss);
+            System.out.println("Average Precision for class republican: " + averagePrecision);
+            System.out.println("Average Recall for class republican: " + averageRecall);
+            System.out.println("Average F1 for class republican: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();

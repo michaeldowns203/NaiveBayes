@@ -1,18 +1,11 @@
 import java.util.*;
 import java.io.*;
 
+//no binning
+//data imputation - we replaced each instance of "?" with a random value 1-10
+//chunks for 10-fold cross validation are NOT shuffled in this class
 public class TestBreastDriver {
 
-    public static void printTestData(Object[][] testData) {
-        System.out.println("Test Data:");
-        for (Object[] row : testData) {
-            System.out.print("[ ");
-            for (Object value : row) {
-                System.out.print(value + " ");
-            }
-            System.out.println("]");
-        }
-    }
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
         List<Object[]> dataset = new ArrayList<>();
@@ -206,9 +199,9 @@ public class TestBreastDriver {
             double averageF1 = totalF1 / 10;
             //System.out.println("Average Accuracy: " + averageAccuracy);
             //System.out.println("Average 0/1 Loss: " + average01loss);
-            //System.out.println("Average Precision: " + averagePrecision);
-            //System.out.println("Average Recall: " + averageRecall);
-            //System.out.println("Average F1: " + averageF1);
+            //System.out.println("Average Precision for class 4: " + averagePrecision);
+            //System.out.println("Average Recall for class 4: " + averageRecall);
+            //System.out.println("Average F1 for class 4: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
