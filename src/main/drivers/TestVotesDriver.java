@@ -1,8 +1,6 @@
 package main.drivers;
 
 import main.classifier.NaiveBayesClassifier;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
@@ -54,7 +52,7 @@ public class TestVotesDriver {
 
             // Reset the reader to the beginning of the file
             stdin.close();
-            input = Files.newInputStream(Paths.get(inputFile1));
+            input = TestVotesDriver.class.getResourceAsStream(inputFile1);
             isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
 
