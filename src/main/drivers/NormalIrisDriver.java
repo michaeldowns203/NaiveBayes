@@ -1,10 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
-//no binning
-//no data imputation
+//binning
+//minor data imputation (we deleted empty line at the end of data set)
 //chunks for 10-fold cross validation ARE shuffled in this class
-public class TestVotesDriver {
+public class NormalIrisDriver {
 
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
@@ -35,10 +40,10 @@ public class TestVotesDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        String inputFile1 = "src/house-votes-84.data";
+        String inputFile1 = "/data/iris.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = NormalIrisDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -46,32 +51,66 @@ public class TestVotesDriver {
             while (stdin.readLine() != null) {
                 lineCount++;
             }
-
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
-
+            // Get rid of blank line at the bottom of the data set
+            lineCount--;
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][16];
+            Object[][] data = new Object[lineCount][4]; // Assuming 4 attributes (from column 1 to 4)
 
             String line;
             int lineNum = 0;
 
             // Read the file and fill the arrays
             while ((line = stdin.readLine()) != null) {
-                String[] rawData = line.split(",");
-
-                // Assign the label (first column)
-                labels[lineNum] = rawData[0];
-
-                for (int i = 1; i < rawData.length; i++) {
-                    data[lineNum][i-1] = rawData[i];
+                if (line.trim().isEmpty()) {
+                    continue;  // Skip this iteration if the line is empty
                 }
+                String[] rawData = line.split(",");
+                // Assign the label (last column)
+                labels[lineNum] = rawData[4];
 
+
+                for (int i = 0; i < rawData.length - 1; i++) {
+                    if (Double.parseDouble(rawData[i]) < 1) {
+                        data[lineNum][i] = 1;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 2) {
+                        data[lineNum][i] = 2;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 3) {
+                        data[lineNum][i] = 3;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 4) {
+                        data[lineNum][i] = 4;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 5) {
+                        data[lineNum][i] = 5;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 6) {
+                        data[lineNum][i] = 6;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 7) {
+                        data[lineNum][i] = 7;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 8) {
+                        data[lineNum][i] = 8;
+                    }
+                }
                 lineNum++;
+            }
+
+            // print the data to verify
+            for (int i = 0; i < lineCount; i++) {
+                System.out.print("Label: " + labels[i] + " Data: ");
+                for (int j = 0; j < 4; j++) {
+                    System.out.print(data[i][j] + " ");
+                }
+                System.out.println();
             }
 
             stdin.close();
@@ -116,7 +155,7 @@ public class TestVotesDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(16);
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(4);
                 classifier.train(trainingArray, trainingLabelsArray);
 
                 // Test the classifier
@@ -131,25 +170,26 @@ public class TestVotesDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                        // Print the test data, predicted label, and actual label
-                        System.out.print("Test Data: [ ");
-                        for (Object feature : testInstance) {
-                            System.out.print(feature + " ");
-                        }
-                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+                    // Print the test data, predicted label, and actual label
+                    System.out.print("Test Data: [ ");
+                    for (Object feature : testInstance) {
+                        System.out.print(feature + " ");
+                    }
+                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
 
 
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
+
                     // Get true positives, false positives, and false negatives
-                    if (predicted.equals("republican")) {
-                        if (actual.equals("republican")) {
+                    if (predicted.equals("Iris-virginica")) {
+                        if (actual.equals("Iris-virginica")) {
                             truePositives++;
                         } else {
                             falsePositives++;
                         }
-                    } else if (actual.equals("republican")) {
+                    } else if (actual.equals("Iris-virginica")) {
                         falseNegatives++;
                     }
                 }
@@ -167,15 +207,14 @@ public class TestVotesDriver {
                 // Calculate 0/1 loss
                 double loss01 = 1.0 - (double) correctPredictions / testData.length;
                 total01loss += loss01;
-
-                    // Print loss info
-                    System.out.println("Number of correct predictions: " + correctPredictions);
-                    System.out.println("Number of test instances: " + testData.length);
-                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                    System.out.println("Precision for class republican (fold " + (i + 1) + "): " + precision);
-                    System.out.println("Recall for class republican (fold " + (i + 1) + "): " + recall);
-                    System.out.println("F1 Score for class republican (fold " + (i + 1) + "): " + f1Score);
+                // Print loss info
+                System.out.println("Number of correct predictions: " + correctPredictions);
+                System.out.println("Number of test instances: " + testData.length);
+                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                System.out.println("Precision for class Iris-virginica (fold " + (i + 1) + "): " + precision);
+                System.out.println("Recall for class Iris-virginica (fold " + (i + 1) + "): " + recall);
+                System.out.println("F1 Score for class Iris-virginica (fold " + (i + 1) + "): " + f1Score);
 
             }
 
@@ -187,15 +226,19 @@ public class TestVotesDriver {
             double averageF1 = totalF1 / 10;
             System.out.println("Average Accuracy: " + averageAccuracy);
             System.out.println("Average 0/1 Loss: " + average01loss);
-            System.out.println("Average Precision for class republican: " + averagePrecision);
-            System.out.println("Average Recall for class republican: " + averageRecall);
-            System.out.println("Average F1 for class republican: " + averageF1);
+            System.out.println("Average Precision for class Iris-virginica: " + averagePrecision);
+            System.out.println("Average Recall for class Iris-virginica: " + averageRecall);
+            System.out.println("Average F1 for class Iris-virginica: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
+
+
+
+
 
 
 

@@ -1,13 +1,15 @@
+package main.classifier;
+
 import java.util.*;
 
 public class NaiveBayesClassifier {
 
-    private Map<Object, Integer> classCounts;
-    private Map<Object, Map<Integer, Map<Object, Integer>>> featureCounts;
-    private Map<Object, Double> priorProbabilities;
-    private Map<Object, Map<Integer, Map<Object, Double>>> likelihoods;
+    private final Map<Object, Integer> classCounts;
+    private final Map<Object, Map<Integer, Map<Object, Integer>>> featureCounts;
+    private final Map<Object, Double> priorProbabilities;
+    private final Map<Object, Map<Integer, Map<Object, Double>>> likelihoods;
     private int totalExamples;
-    private int numAttributes;
+    private final int numAttributes;
 
     public NaiveBayesClassifier(int numAttributes) {
         this.classCounts = new HashMap<>();
@@ -26,9 +28,8 @@ public class NaiveBayesClassifier {
             Object label = labels[i];
             classCounts.put(label, classCounts.getOrDefault(label, 0) + 1);
 
-            for (int j = 0; j < data[i].length; j++) {
-                int attribute = j;
-                Object value = data[i][j];
+            for (int attribute = 0; attribute < data[i].length; attribute++) {
+                Object value = data[i][attribute];
                 featureCounts.computeIfAbsent(label, k -> new HashMap<>())
                         .computeIfAbsent(attribute, k -> new HashMap<>())
                         .put(value, featureCounts.get(label).get(attribute).getOrDefault(value, 0) + 1);
@@ -61,9 +62,8 @@ public class NaiveBayesClassifier {
 
         for (Object label : priorProbabilities.keySet()) {
             double score = priorProbabilities.get(label);
-            for (int j = 0; j < instance.length; j++) {
-                int attribute = j;
-                Object value = instance[j];
+            for (int attribute = 0; attribute < instance.length; attribute++) {
+                Object value = instance[attribute];
                 score *= likelihoods.get(label).get(attribute).getOrDefault(value, 1.0 / (classCounts.get(label) + numAttributes));
             }
             classScores.put(label, score);

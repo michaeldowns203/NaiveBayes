@@ -1,10 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
 //no binning
-//data imputation - we replaced each instance of "?" with a random value 1-10
-//chunks for 10-fold cross validation are NOT shuffled in this class (but they were shuffled to get our experimental data)
-public class NoiseTestBreastDriver {
+//no data imputation
+//chunks for 10-fold cross validation ARE shuffled in this class
+public class NoiseTestVoteDriver {
     // Function to shuffle values within a feature column
     public static void shuffleFeature(Object[][] data, int featureIndex) {
         List<Object> featureValues = new ArrayList<>();
@@ -40,6 +45,7 @@ public class NoiseTestBreastDriver {
             shuffleFeature(data, featureIndex);
         }
     }
+
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
         List<Object[]> dataset = new ArrayList<>();
@@ -69,10 +75,10 @@ public class NoiseTestBreastDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        String inputFile1 = "src/breast-cancer-wisconsin.data";
+        String inputFile1 = "/data/house-votes-84.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = NoiseTestVoteDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -83,13 +89,13 @@ public class NoiseTestBreastDriver {
 
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
 
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][9]; // Assuming 9 attributes (from column 2 to 10)
+            Object[][] data = new Object[lineCount][16];
 
             String line;
             int lineNum = 0;
@@ -99,24 +105,21 @@ public class NoiseTestBreastDriver {
                 String[] rawData = line.split(",");
 
                 // Assign the label (first column)
-                labels[lineNum] = Integer.parseInt(rawData[10]);
+                labels[lineNum] = rawData[0];
 
-                // Fill the data array (columns 2 to 10)
-                for (int i = 1; i <= 9; i++) {
-                    if (rawData[i].equals("?")) {
-                        data[lineNum][i - 1] = (int) (Math.random() * 10) + 1; // Handle missing values
-                    } else {
-                        data[lineNum][i - 1] = Integer.parseInt(rawData[i]);
-                    }
+
+                for (int i = 1; i < rawData.length; i++) {
+                    data[lineNum][i-1] = rawData[i];
                 }
 
                 lineNum++;
             }
-            introduceNoise(data, 9);
+
+            introduceNoise(data, 16);
             // print the data to verify
             for (int i = 0; i < lineCount; i++) {
                 System.out.print("Label: " + labels[i] + " Data: ");
-                for (int j = 0; j < 9; j++) {
+                for (int j = 0; j < 16; j++) {
                     System.out.print(data[i][j] + " ");
                 }
                 System.out.println();
@@ -164,12 +167,8 @@ public class NoiseTestBreastDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(9);  // Assuming 9 attributes
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(16);
                 classifier.train(trainingArray, trainingLabelsArray);
-                if (i == 9) {
-                    classifier.printModel();  // Print the learned parameters
-                    classifier.printCounts(); // Print class and attribute counts
-                }
 
                 // Test the classifier
                 int correctPredictions = 0;
@@ -183,30 +182,29 @@ public class NoiseTestBreastDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                    if (i == 9) {
-                        // Print the test data, predicted label, and actual label
-                        System.out.print("Test Data: [ ");
-                        for (Object feature : testInstance) {
-                            System.out.print(feature + " ");
-                        }
-                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+                    // Print the test data, predicted label, and actual label
+                    System.out.print("Test Data: [ ");
+                    for (Object feature : testInstance) {
+                        System.out.print(feature + " ");
                     }
+                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+
 
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
-                    // Check if the predicted class is 4 (positive class)
-                    if (predicted.equals(4)) {
-                        if (actual.equals(4)) {
-                            truePositives++;  // Correctly predicted class 4 (True Positive)
+                    // Get true positives, false positives, and false negatives
+                    if (predicted.equals("republican")) {
+                        if (actual.equals("republican")) {
+                            truePositives++;
                         } else {
-                            falsePositives++;  // Incorrectly predicted class 4 (False Positive)
+                            falsePositives++;
                         }
-                    } else if (actual.equals(4)) {
-                        falseNegatives++;  // Incorrectly predicted something else, but actual is class 4 (False Negative)
+                    } else if (actual.equals("republican")) {
+                        falseNegatives++;
                     }
                 }
-                // Calculate precision and recall for class 4
+                // Calculate precision and recall
                 double precision = truePositives / (double) (truePositives + falsePositives);
                 double recall = truePositives / (double) (truePositives + falseNegatives);
                 totalPrecision += precision;
@@ -221,16 +219,15 @@ public class NoiseTestBreastDriver {
                 double loss01 = 1.0 - (double) correctPredictions / testData.length;
                 total01loss += loss01;
 
-                if (i == 9) {
-                    // Print loss info
-                    System.out.println("Number of correct predictions: " + correctPredictions);
-                    System.out.println("Number of test instances: " + testData.length);
-                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                    System.out.println("Precision for class 4 (fold " + (i + 1) + "): " + precision);
-                    System.out.println("Recall for class 4 (fold " + (i + 1) + "): " + recall);
-                    System.out.println("F1 Score for class 4 (fold " + (i + 1) + "): " + f1Score);
-                }
+                // Print loss info
+                System.out.println("Number of correct predictions: " + correctPredictions);
+                System.out.println("Number of test instances: " + testData.length);
+                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                System.out.println("Precision for class republican (fold " + (i + 1) + "): " + precision);
+                System.out.println("Recall for class republican (fold " + (i + 1) + "): " + recall);
+                System.out.println("F1 Score for class republican (fold " + (i + 1) + "): " + f1Score);
+
             }
 
             // Average accuracy across all 10 folds
@@ -239,16 +236,17 @@ public class NoiseTestBreastDriver {
             double averagePrecision = totalPrecision / 10;
             double averageRecall = totalRecall / 10;
             double averageF1 = totalF1 / 10;
-            //System.out.println("Average Accuracy: " + averageAccuracy);
-            //System.out.println("Average 0/1 Loss: " + average01loss);
-            //System.out.println("Average Precision for class 4: " + averagePrecision);
-            //System.out.println("Average Recall for class 4: " + averageRecall);
-            //System.out.println("Average F1 for class 4: " + averageF1);
+            System.out.println("Average Accuracy: " + averageAccuracy);
+            System.out.println("Average 0/1 Loss: " + average01loss);
+            System.out.println("Average Precision for class republican: " + averagePrecision);
+            System.out.println("Average Recall for class republican: " + averageRecall);
+            System.out.println("Average F1 for class republican: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
+
 
 

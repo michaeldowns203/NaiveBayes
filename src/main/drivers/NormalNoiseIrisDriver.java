@@ -1,10 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
 //binning
-//no data imputation
+//minor data imputation (we deleted empty line at the end of data set)
 //chunks for 10-fold cross validation ARE shuffled in this class
-public class NormalNoiseGlassDriver {
+public class NormalNoiseIrisDriver {
     // Function to shuffle values within a feature column
     public static void shuffleFeature(Object[][] data, int featureIndex) {
         List<Object> featureValues = new ArrayList<>();
@@ -69,10 +74,10 @@ public class NormalNoiseGlassDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        String inputFile1 = "src/glass.data";
+        String inputFile1 = "/data/iris.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = NormalNoiseIrisDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -80,117 +85,64 @@ public class NormalNoiseGlassDriver {
             while (stdin.readLine() != null) {
                 lineCount++;
             }
-
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
-
+            // Get rid of blank line at the bottom of the data set
+            lineCount--;
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][9]; // Assuming 9 attributes (from column 2 to 10)
+            Object[][] data = new Object[lineCount][4]; // Assuming 4 attributes (from column 1 to 4)
 
             String line;
             int lineNum = 0;
 
             // Read the file and fill the arrays
             while ((line = stdin.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue;  // Skip this iteration if the line is empty
+                }
                 String[] rawData = line.split(",");
-
                 // Assign the label (last column)
-                labels[lineNum] = Integer.parseInt(rawData[10]);
+                labels[lineNum] = rawData[4];
 
-                // Fill the data array (columns 2 to 10)
-                for (int i = 1; i <= 9; i++) {
-                    if (Double.parseDouble(rawData[i]) < .001) {
-                        data[lineNum][i - 1] = .001;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < .2) {
-                        data[lineNum][i - 1] = .2;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < .5) {
-                        data[lineNum][i - 1] = .5;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 1) {
-                        data[lineNum][i - 1] = 1;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 1.515) {
-                        data[lineNum][i - 1] = 1.515;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 1.517) {
-                        data[lineNum][i - 1] = 1.517;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 1.519) {
-                        data[lineNum][i - 1] = 1.519;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 1.525) {
-                        data[lineNum][i - 1] = 1.525;
+
+                for (int i = 0; i < rawData.length - 1; i++) {
+                    if (Double.parseDouble(rawData[i]) < 1) {
+                        data[lineNum][i] = 1;
                     }
                     else if (Double.parseDouble(rawData[i]) < 2) {
-                        data[lineNum][i - 1] = 2;
+                        data[lineNum][i] = 2;
                     }
-                    else if (Double.parseDouble(rawData[i]) < 2.75) {
-                        data[lineNum][i - 1] = 2.75;
+                    else if (Double.parseDouble(rawData[i]) < 3) {
+                        data[lineNum][i] = 3;
                     }
-                    else if (Double.parseDouble(rawData[i]) < 3.5) {
-                        data[lineNum][i - 1] = 3.5;
+                    else if (Double.parseDouble(rawData[i]) < 4) {
+                        data[lineNum][i] = 4;
                     }
-                    else if (Double.parseDouble(rawData[i]) < 3.75) {
-                        data[lineNum][i - 1] = 3.75;
+                    else if (Double.parseDouble(rawData[i]) < 5) {
+                        data[lineNum][i] = 5;
                     }
-                    else if (Double.parseDouble(rawData[i]) < 4.5) {
-                        data[lineNum][i - 1] = 4.5;
+                    else if (Double.parseDouble(rawData[i]) < 6) {
+                        data[lineNum][i] = 6;
+                    }
+                    else if (Double.parseDouble(rawData[i]) < 7) {
+                        data[lineNum][i] = 7;
                     }
                     else if (Double.parseDouble(rawData[i]) < 8) {
-                        data[lineNum][i - 1] = 8;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 9) {
-                        data[lineNum][i - 1] = 9;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 10) {
-                        data[lineNum][i - 1] = 10;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 13) {
-                        data[lineNum][i - 1] = 13;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 14) {
-                        data[lineNum][i - 1] = 14;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 15) {
-                        data[lineNum][i - 1] = 15;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 70) {
-                        data[lineNum][i - 1] = 70;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 72) {
-                        data[lineNum][i - 1] = 72;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 72.5) {
-                        data[lineNum][i - 1] = 72.5;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 73) {
-                        data[lineNum][i - 1] = 73;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 73.5) {
-                        data[lineNum][i - 1] = 73.5;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 75) {
-                        data[lineNum][i - 1] = 75;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 76) {
-                        data[lineNum][i - 1] = 76;
+                        data[lineNum][i] = 8;
                     }
                 }
-
                 lineNum++;
             }
 
-            introduceNoise(data, 9);
+            introduceNoise(data, 4);
             // print the data to verify
             for (int i = 0; i < lineCount; i++) {
                 System.out.print("Label: " + labels[i] + " Data: ");
-                for (int j = 0; j < 9; j++) {
+                for (int j = 0; j < 4; j++) {
                     System.out.print(data[i][j] + " ");
                 }
                 System.out.println();
@@ -238,7 +190,7 @@ public class NormalNoiseGlassDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(9);  // Assuming 9 attributes
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(4);
                 classifier.train(trainingArray, trainingLabelsArray);
 
                 // Test the classifier
@@ -247,7 +199,7 @@ public class NormalNoiseGlassDriver {
                 int falsePositives = 0;
                 int falseNegatives = 0;
                 for (int j = 0; j < testData.length; j++) {
-                    Object[] testInstance = new Object [testData[j].length - 1];
+                    Object[] testInstance = new Object[testData[j].length - 1];
                     System.arraycopy(testData[j], 0, testInstance, 0, testData[j].length - 1);
 
                     Object predicted = classifier.classify(testInstance);
@@ -264,14 +216,15 @@ public class NormalNoiseGlassDriver {
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
+
                     // Get true positives, false positives, and false negatives
-                    if (predicted.equals(1)) {
-                        if (actual.equals(1)) {
+                    if (predicted.equals("Iris-virginica")) {
+                        if (actual.equals("Iris-virginica")) {
                             truePositives++;
                         } else {
                             falsePositives++;
                         }
-                    } else if (actual.equals(1)) {
+                    } else if (actual.equals("Iris-virginica")) {
                         falseNegatives++;
                     }
                 }
@@ -294,9 +247,9 @@ public class NormalNoiseGlassDriver {
                 System.out.println("Number of test instances: " + testData.length);
                 System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
                 System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                System.out.println("Precision for class 1 (fold " + (i + 1) + "): " + precision);
-                System.out.println("Recall for class 1 (fold " + (i + 1) + "): " + recall);
-                System.out.println("F1 Score for class 1 (fold " + (i + 1) + "): " + f1Score);
+                System.out.println("Precision for class Iris-virginica (fold " + (i + 1) + "): " + precision);
+                System.out.println("Recall for class Iris-virginica (fold " + (i + 1) + "): " + recall);
+                System.out.println("F1 Score for class Iris-virginica (fold " + (i + 1) + "): " + f1Score);
 
             }
 
@@ -308,15 +261,16 @@ public class NormalNoiseGlassDriver {
             double averageF1 = totalF1 / 10;
             System.out.println("Average Accuracy: " + averageAccuracy);
             System.out.println("Average 0/1 Loss: " + average01loss);
-            System.out.println("Average Precision for class 1: " + averagePrecision);
-            System.out.println("Average Recall for class 1: " + averageRecall);
-            System.out.println("Average F1 for class 1: " + averageF1);
+            System.out.println("Average Precision for class Iris-virginica: " + averagePrecision);
+            System.out.println("Average Recall for class Iris-virginica: " + averageRecall);
+            System.out.println("Average F1 for class Iris-virginica: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
+
 
 
 

@@ -1,10 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
 //no binning
-//data imputation - we replaced each instance of "?" with a random value 1-10
-//chunks for 10-fold cross validation are NOT shuffled in this class (but they were shuffled to get our experimental data)
-public class TestBreastDriver {
+//no data imputation
+//chunks for 10-fold cross validation ARE shuffled in this class
+public class TestSoybeansDriver {
 
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
@@ -17,7 +22,7 @@ public class TestBreastDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        //Collections.shuffle(dataset);
+        Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;
@@ -35,11 +40,10 @@ public class TestBreastDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        // Assume data and labels are loaded as in your previous driver code
-        String inputFile1 = "src/breast-cancer-wisconsin.data";
+        String inputFile1 = "/data/soybean-small.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = TestSoybeansDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -50,13 +54,13 @@ public class TestBreastDriver {
 
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
 
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][9]; // Assuming 9 attributes (from column 2 to 10)
+            Object[][] data = new Object[lineCount][35];
 
             String line;
             int lineNum = 0;
@@ -65,16 +69,11 @@ public class TestBreastDriver {
             while ((line = stdin.readLine()) != null) {
                 String[] rawData = line.split(",");
 
-                // Assign the label (first column)
-                labels[lineNum] = Integer.parseInt(rawData[10]);
+                // Assign the label (last column)
+                labels[lineNum] = rawData[35];
 
-                // Fill the data array (columns 2 to 10)
-                for (int i = 1; i <= 9; i++) {
-                    if (rawData[i].equals("?")) {
-                        data[lineNum][i - 1] = (int) (Math.random() * 10) + 1; // Handle missing values
-                    } else {
-                        data[lineNum][i - 1] = Integer.parseInt(rawData[i]);
-                    }
+                for (int i = 0; i < rawData.length - 1; i++) {
+                    data[lineNum][i] = Integer.parseInt(rawData[i]);
                 }
 
                 lineNum++;
@@ -104,6 +103,8 @@ public class TestBreastDriver {
                     testLabels[j] = testData[j][testData[j].length - 1]; // Last column is label
                 }
 
+
+
                 // Combine the other 9 chunks into the training set
                 for (int j = 0; j < 10; j++) {
                     if (j != i) {
@@ -122,12 +123,8 @@ public class TestBreastDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(9);  // Assuming 9 attributes
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(35);
                 classifier.train(trainingArray, trainingLabelsArray);
-                if (i == 9) {
-                    classifier.printModel();  // Print the learned parameters
-                    classifier.printCounts(); // Print class and attribute counts
-                }
 
                 // Test the classifier
                 int correctPredictions = 0;
@@ -141,30 +138,29 @@ public class TestBreastDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                    if (i == 9) {
-                        // Print the test data, predicted label, and actual label
-                        System.out.print("Test Data: [ ");
-                        for (Object feature : testInstance) {
-                            System.out.print(feature + " ");
-                        }
-                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+                    // Print the test data, predicted label, and actual label
+                    System.out.print("Test Data: [ ");
+                    for (Object feature : testInstance) {
+                        System.out.print(feature + " ");
                     }
+                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+
 
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
-                    // Check if the predicted class is 4 (positive class)
-                    if (predicted.equals(4)) {
-                        if (actual.equals(4)) {
-                            truePositives++;  // Correctly predicted class 4 (True Positive)
+                    // Get true positives, false positives, and false negatives
+                    if (predicted.equals("D1")) {
+                        if (actual.equals("D1")) {
+                            truePositives++;
                         } else {
-                            falsePositives++;  // Incorrectly predicted class 4 (False Positive)
+                            falsePositives++;
                         }
-                    } else if (actual.equals(4)) {
-                        falseNegatives++;  // Incorrectly predicted something else, but actual is class 4 (False Negative)
+                    } else if (actual.equals("D1")) {
+                        falseNegatives++;
                     }
                 }
-                // Calculate precision and recall for class 4
+                // Calculate precision and recall
                 double precision = truePositives / (double) (truePositives + falsePositives);
                 double recall = truePositives / (double) (truePositives + falseNegatives);
                 totalPrecision += precision;
@@ -179,16 +175,15 @@ public class TestBreastDriver {
                 double loss01 = 1.0 - (double) correctPredictions / testData.length;
                 total01loss += loss01;
 
-                if (i == 9) {
-                    // Print loss info
-                    System.out.println("Number of correct predictions: " + correctPredictions);
-                    System.out.println("Number of test instances: " + testData.length);
-                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                    System.out.println("Precision for class 4 (fold " + (i + 1) + "): " + precision);
-                    System.out.println("Recall for class 4 (fold " + (i + 1) + "): " + recall);
-                    System.out.println("F1 Score for class 4 (fold " + (i + 1) + "): " + f1Score);
-                }
+                // Print loss info
+                System.out.println("Number of correct predictions: " + correctPredictions);
+                System.out.println("Number of test instances: " + testData.length);
+                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                System.out.println("Precision for class D1 (fold " + (i + 1) + "): " + precision);
+                System.out.println("Recall for class D1 (fold " + (i + 1) + "): " + recall);
+                System.out.println("F1 Score for class D1 (fold " + (i + 1) + "): " + f1Score);
+
             }
 
             // Average accuracy across all 10 folds
@@ -197,15 +192,17 @@ public class TestBreastDriver {
             double averagePrecision = totalPrecision / 10;
             double averageRecall = totalRecall / 10;
             double averageF1 = totalF1 / 10;
-            //System.out.println("Average Accuracy: " + averageAccuracy);
-            //System.out.println("Average 0/1 Loss: " + average01loss);
-            //System.out.println("Average Precision for class 4: " + averagePrecision);
-            //System.out.println("Average Recall for class 4: " + averageRecall);
-            //System.out.println("Average F1 for class 4: " + averageF1);
+            System.out.println("Average Accuracy: " + averageAccuracy);
+            System.out.println("Average 0/1 Loss: " + average01loss);
+            System.out.println("Average Precision for class D1: " + averagePrecision);
+            System.out.println("Average Recall for class D1: " + averageRecall);
+            System.out.println("Average F1 for class D1: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 }
+
 

@@ -1,10 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
-//binning
-//minor data imputation (we deleted empty line at the end of data set)
-//chunks for 10-fold cross validation ARE shuffled in this class
-public class NormalIrisDriver {
+//no binning
+//data imputation - we replaced each instance of "?" with a random value 1-10
+//chunks for 10-fold cross validation are NOT shuffled in this class (but they were shuffled to get our experimental data)
+public class TestBreastDriver {
 
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
@@ -17,7 +22,7 @@ public class NormalIrisDriver {
         }
 
         // Shuffle the dataset to ensure randomness
-        Collections.shuffle(dataset);
+        //Collections.shuffle(dataset);
 
         // Split into chunks
         int chunkSize = dataset.size() / numChunks;
@@ -35,10 +40,11 @@ public class NormalIrisDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        String inputFile1 = "src/iris.data";
+        // Assume data and labels are loaded as in your previous driver code
+        String inputFile1 = "/data/breast-cancer-wisconsin.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = TestBreastDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -46,66 +52,37 @@ public class NormalIrisDriver {
             while (stdin.readLine() != null) {
                 lineCount++;
             }
+
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
-            // Get rid of blank line at the bottom of the data set
-            lineCount--;
+
             // Initialize the arrays with the known size
             Object[] labels = new Object[lineCount];
-            Object[][] data = new Object[lineCount][4]; // Assuming 4 attributes (from column 1 to 4)
+            Object[][] data = new Object[lineCount][9]; // Assuming 9 attributes (from column 2 to 10)
 
             String line;
             int lineNum = 0;
 
             // Read the file and fill the arrays
             while ((line = stdin.readLine()) != null) {
-                if (line.trim().isEmpty()) {
-                    continue;  // Skip this iteration if the line is empty
-                }
                 String[] rawData = line.split(",");
-                // Assign the label (last column)
-                labels[lineNum] = rawData[4];
 
+                // Assign the label (first column)
+                labels[lineNum] = Integer.parseInt(rawData[10]);
 
-                for (int i = 0; i < rawData.length - 1; i++) {
-                    if (Double.parseDouble(rawData[i]) < 1) {
-                        data[lineNum][i] = 1;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 2) {
-                        data[lineNum][i] = 2;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 3) {
-                        data[lineNum][i] = 3;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 4) {
-                        data[lineNum][i] = 4;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 5) {
-                        data[lineNum][i] = 5;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 6) {
-                        data[lineNum][i] = 6;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 7) {
-                        data[lineNum][i] = 7;
-                    }
-                    else if (Double.parseDouble(rawData[i]) < 8) {
-                        data[lineNum][i] = 8;
+                // Fill the data array (columns 2 to 10)
+                for (int i = 1; i <= 9; i++) {
+                    if (rawData[i].equals("?")) {
+                        data[lineNum][i - 1] = (int) (Math.random() * 10) + 1; // Handle missing values
+                    } else {
+                        data[lineNum][i - 1] = Integer.parseInt(rawData[i]);
                     }
                 }
+
                 lineNum++;
-            }
-
-            // print the data to verify
-            for (int i = 0; i < lineCount; i++) {
-                System.out.print("Label: " + labels[i] + " Data: ");
-                for (int j = 0; j < 4; j++) {
-                    System.out.print(data[i][j] + " ");
-                }
-                System.out.println();
             }
 
             stdin.close();
@@ -150,8 +127,12 @@ public class NormalIrisDriver {
                 Object[] trainingLabelsArray = trainingLabels.toArray(new Object[0]);
 
                 // Train the classifier
-                NaiveBayesClassifier classifier = new NaiveBayesClassifier(4);
+                NaiveBayesClassifier classifier = new NaiveBayesClassifier(9);  // Assuming 9 attributes
                 classifier.train(trainingArray, trainingLabelsArray);
+                if (i == 9) {
+                    classifier.printModel();  // Print the learned parameters
+                    classifier.printCounts(); // Print class and attribute counts
+                }
 
                 // Test the classifier
                 int correctPredictions = 0;
@@ -165,30 +146,30 @@ public class NormalIrisDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                    // Print the test data, predicted label, and actual label
-                    System.out.print("Test Data: [ ");
-                    for (Object feature : testInstance) {
-                        System.out.print(feature + " ");
+                    if (i == 9) {
+                        // Print the test data, predicted label, and actual label
+                        System.out.print("Test Data: [ ");
+                        for (Object feature : testInstance) {
+                            System.out.print(feature + " ");
+                        }
+                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
                     }
-                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
-
 
                     if (predicted.equals(testLabels[j])) {
                         correctPredictions++;
                     }
-
-                    // Get true positives, false positives, and false negatives
-                    if (predicted.equals("Iris-virginica")) {
-                        if (actual.equals("Iris-virginica")) {
-                            truePositives++;
+                    // Check if the predicted class is 4 (positive class)
+                    if (predicted.equals(4)) {
+                        if (actual.equals(4)) {
+                            truePositives++;  // Correctly predicted class 4 (True Positive)
                         } else {
-                            falsePositives++;
+                            falsePositives++;  // Incorrectly predicted class 4 (False Positive)
                         }
-                    } else if (actual.equals("Iris-virginica")) {
-                        falseNegatives++;
+                    } else if (actual.equals(4)) {
+                        falseNegatives++;  // Incorrectly predicted something else, but actual is class 4 (False Negative)
                     }
                 }
-                // Calculate precision and recall
+                // Calculate precision and recall for class 4
                 double precision = truePositives / (double) (truePositives + falsePositives);
                 double recall = truePositives / (double) (truePositives + falseNegatives);
                 totalPrecision += precision;
@@ -202,15 +183,17 @@ public class NormalIrisDriver {
                 // Calculate 0/1 loss
                 double loss01 = 1.0 - (double) correctPredictions / testData.length;
                 total01loss += loss01;
-                // Print loss info
-                System.out.println("Number of correct predictions: " + correctPredictions);
-                System.out.println("Number of test instances: " + testData.length);
-                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                System.out.println("Precision for class Iris-virginica (fold " + (i + 1) + "): " + precision);
-                System.out.println("Recall for class Iris-virginica (fold " + (i + 1) + "): " + recall);
-                System.out.println("F1 Score for class Iris-virginica (fold " + (i + 1) + "): " + f1Score);
 
+                if (i == 9) {
+                    // Print loss info
+                    System.out.println("Number of correct predictions: " + correctPredictions);
+                    System.out.println("Number of test instances: " + testData.length);
+                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                    System.out.println("Precision for class 4 (fold " + (i + 1) + "): " + precision);
+                    System.out.println("Recall for class 4 (fold " + (i + 1) + "): " + recall);
+                    System.out.println("F1 Score for class 4 (fold " + (i + 1) + "): " + f1Score);
+                }
             }
 
             // Average accuracy across all 10 folds
@@ -219,21 +202,15 @@ public class NormalIrisDriver {
             double averagePrecision = totalPrecision / 10;
             double averageRecall = totalRecall / 10;
             double averageF1 = totalF1 / 10;
-            System.out.println("Average Accuracy: " + averageAccuracy);
-            System.out.println("Average 0/1 Loss: " + average01loss);
-            System.out.println("Average Precision for class Iris-virginica: " + averagePrecision);
-            System.out.println("Average Recall for class Iris-virginica: " + averageRecall);
-            System.out.println("Average F1 for class Iris-virginica: " + averageF1);
+            //System.out.println("Average Accuracy: " + averageAccuracy);
+            //System.out.println("Average 0/1 Loss: " + average01loss);
+            //System.out.println("Average Precision for class 4: " + averagePrecision);
+            //System.out.println("Average Recall for class 4: " + averageRecall);
+            //System.out.println("Average F1 for class 4: " + averageF1);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
-
-
-
-
-
-
 

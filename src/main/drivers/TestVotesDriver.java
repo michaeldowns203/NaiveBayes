@@ -1,45 +1,15 @@
+package main.drivers;
+
+import main.classifier.NaiveBayesClassifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.io.*;
 
 //no binning
 //no data imputation
 //chunks for 10-fold cross validation ARE shuffled in this class
-public class NoiseTestVoteDriver {
-    // Function to shuffle values within a feature column
-    public static void shuffleFeature(Object[][] data, int featureIndex) {
-        List<Object> featureValues = new ArrayList<>();
-
-        // Extract all values from the feature column
-        for (Object[] row : data) {
-            featureValues.add(row[featureIndex]);
-        }
-
-        // Shuffle the extracted feature values
-        //Collections.shuffle(featureValues);
-
-        // Put the shuffled values back into the dataset
-        for (int i = 0; i < data.length; i++) {
-            data[i][featureIndex] = featureValues.get(i);
-        }
-    }
-
-    // Introduce noise into 10% of the features by shuffling them
-    public static void introduceNoise(Object[][] data, int numFeatures) {
-        Random rand = new Random();
-        Set<Integer> selectedFeatures = new HashSet<>();
-        int numNoisyFeatures = (int) Math.ceil(numFeatures * 0.1);  // 10% of features
-
-        // Randomly select 10% of the features
-        while (selectedFeatures.size() < numNoisyFeatures) {
-            int featureIndex = rand.nextInt(numFeatures);
-            selectedFeatures.add(featureIndex);
-        }
-
-        // Shuffle values within the selected features
-        for (int featureIndex : selectedFeatures) {
-            shuffleFeature(data, featureIndex);
-        }
-    }
+public class TestVotesDriver {
 
     // Split the dataset into 10 chunks
     public static List<Object[][]> splitIntoChunks(Object[][] data, Object[] labels, int numChunks) {
@@ -70,10 +40,10 @@ public class NoiseTestVoteDriver {
     }
 
     public static void main(String[] args) throws IOException {
-        String inputFile1 = "src/house-votes-84.data";
+        String inputFile1 = "/data/house-votes-84.data";
         try {
-            FileInputStream fis = new FileInputStream(inputFile1);
-            InputStreamReader isr = new InputStreamReader(fis);
+            InputStream input = TestVotesDriver.class.getResourceAsStream(inputFile1);
+            InputStreamReader isr = new InputStreamReader(input);
             BufferedReader stdin = new BufferedReader(isr);
 
             // First, count the number of lines to determine the size of the arrays
@@ -84,8 +54,8 @@ public class NoiseTestVoteDriver {
 
             // Reset the reader to the beginning of the file
             stdin.close();
-            fis = new FileInputStream(inputFile1);
-            isr = new InputStreamReader(fis);
+            input = Files.newInputStream(Paths.get(inputFile1));
+            isr = new InputStreamReader(input);
             stdin = new BufferedReader(isr);
 
             // Initialize the arrays with the known size
@@ -102,22 +72,11 @@ public class NoiseTestVoteDriver {
                 // Assign the label (first column)
                 labels[lineNum] = rawData[0];
 
-
                 for (int i = 1; i < rawData.length; i++) {
                     data[lineNum][i-1] = rawData[i];
                 }
 
                 lineNum++;
-            }
-
-            introduceNoise(data, 16);
-            // print the data to verify
-            for (int i = 0; i < lineCount; i++) {
-                System.out.print("Label: " + labels[i] + " Data: ");
-                for (int j = 0; j < 16; j++) {
-                    System.out.print(data[i][j] + " ");
-                }
-                System.out.println();
             }
 
             stdin.close();
@@ -177,12 +136,12 @@ public class NoiseTestVoteDriver {
                     Object predicted = classifier.classify(testInstance);
                     Object actual = testLabels[j];
 
-                    // Print the test data, predicted label, and actual label
-                    System.out.print("Test Data: [ ");
-                    for (Object feature : testInstance) {
-                        System.out.print(feature + " ");
-                    }
-                    System.out.println("] Predicted: " + predicted + " Actual: " + actual);
+                        // Print the test data, predicted label, and actual label
+                        System.out.print("Test Data: [ ");
+                        for (Object feature : testInstance) {
+                            System.out.print(feature + " ");
+                        }
+                        System.out.println("] Predicted: " + predicted + " Actual: " + actual);
 
 
                     if (predicted.equals(testLabels[j])) {
@@ -214,14 +173,14 @@ public class NoiseTestVoteDriver {
                 double loss01 = 1.0 - (double) correctPredictions / testData.length;
                 total01loss += loss01;
 
-                // Print loss info
-                System.out.println("Number of correct predictions: " + correctPredictions);
-                System.out.println("Number of test instances: " + testData.length);
-                System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
-                System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
-                System.out.println("Precision for class republican (fold " + (i + 1) + "): " + precision);
-                System.out.println("Recall for class republican (fold " + (i + 1) + "): " + recall);
-                System.out.println("F1 Score for class republican (fold " + (i + 1) + "): " + f1Score);
+                    // Print loss info
+                    System.out.println("Number of correct predictions: " + correctPredictions);
+                    System.out.println("Number of test instances: " + testData.length);
+                    System.out.println("Fold " + (i + 1) + " Accuracy: " + accuracy);
+                    System.out.println("Fold " + (i + 1) + " 0/1 loss: " + loss01);
+                    System.out.println("Precision for class republican (fold " + (i + 1) + "): " + precision);
+                    System.out.println("Recall for class republican (fold " + (i + 1) + "): " + recall);
+                    System.out.println("F1 Score for class republican (fold " + (i + 1) + "): " + f1Score);
 
             }
 
